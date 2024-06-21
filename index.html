@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <title>Document</title>
+    <style>
+    </style>
+</head>
+<body class="p-5">
+    <h1 class="mb-3">Online Bill Splitter</h1>
+    <div>
+        <input type="text" id="namesInput" class="form-control mb-3" placeholder="Enter names, separate by comma" aria-label="Enter names, separate by comma" aria-describedby="basic-addon1">
+        <div class="mb-4 container-fluid">
+            <div class="row mb-3">
+                <button type="button" class="btn btn-secondary col me-2" data-bs-toggle="modal" data-bs-target="#expenseModal">
+                    + Add Expense
+                </button>
+                <button type="button" class="btn btn-secondary col ms-2">
+                    <i class="bi-upload me-2"></i>
+                    Upload receipt
+                </button>
+            </div>
+            <div class="row">
+                <button type="button" class="btn btn-success" id="settleUpBtn">
+                    <i class="bi-cash me-2"></i>
+                    Settle up
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- Add expense modal -->
+    <div class="modal fade" id="expenseModal" tabindex="-1" aria-labelledby="expenseModal" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="exampleModalLabel">Expense</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+              <div class="mb-3">
+                  <input type="text" class="form-control" id="expenseName" placeholder="Name">
+              </div>
+              <div class="mb-3">
+                  <input type="number" class="form-control" id="expenseAmount" placeholder="Amount">
+              </div>
+              <div>
+                  <select class="form-select mb-3" id="expensePaidBy" aria-label="Paid By">
+                      <option selected>Paid By</option>
+                  </select>
+              </div>
+              <div>
+                  <div class="dropdown">
+                      <button class="btn btn-secondary dropdown-toggle w-100 text-start text-dark bg-white" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Split By
+                      </button>
+                      <ul class="dropdown-menu">
+                          <ul class="list-group"  id="splitByDropdown">
+                              <li class="list-group-item">
+                                <input class="form-check-input me-1" type="checkbox" value="all" id="firstCheckboxStretched">
+                                <label class="form-check-label" for="firstCheckboxStretched">All</label>
+                              </li>
+                          </ul>
+                      </ul>
+                  </div>
+              </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-success w-100" id="addExpense">Add</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Expenses list -->
+    <div class="pb-5 expenses-table">
+        <h2 class="m-3">Expenses</h2>
+        <!-- Card component (only visible when the screen is smaller than md) -->
+        <div class="d-md-none">
+            <div class="card" style="width: 18rem;">
+                <div class="card-body">
+                  <h5 class="card-title">Name</h5>
+                  <div class="card-text">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="expenseNameMobile" placeholder="Amount">
+                    </div>
+                    <div>
+                        <select class="form-select mb-3" id="expensePaidByMobile" aria-label="Paid By">
+                            <option selected>Paid By</option>
+                        </select>
+                    </div>
+                    <div>
+                        <div class="dropdown">
+                            <button class="btn btn-secondary dropdown-toggle w-100 text-start text-dark bg-white" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                              Split By
+                            </button>
+                            <ul class="dropdown-menu">
+                                <ul class="list-group" id="splitByDropdownMobile">
+                                    <li class="list-group-item">
+                                      <input class="form-check-input me-1" type="checkbox" value="all" id="firstCheckboxStretched">
+                                      <label class="form-check-label" for="firstCheckboxStretched">All (4)</label>
+                                    </li>
+                                    <li class="list-group-item">
+                                      <input class="form-check-input me-1" type="checkbox" value="" id="secondCheckboxStretched">
+                                      <label class="form-check-label" for="secondCheckboxStretched">Person A</label>
+                                    </li>
+                                    <li class="list-group-item">
+                                      <input class="form-check-input me-1" type="checkbox" value="" id="thirdCheckboxStretched">
+                                      <label class="form-check-label" for="thirdCheckboxStretched">Person B</label>
+                                    </li>
+                                </ul>
+                            </ul>
+                        </div>
+                    </div>
+                  </div>
+                </div>
+            </div>
+        </div>
+        <!-- Table component (only visible when the screen is larger or equal to md) -->
+        <div class="d-none d-md-block">
+            <table class="table" >
+                <thead>
+                  <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Amount</th>
+                    <th scope="col">Paid By</th>
+                    <th scope="col">Split</th>
+                    <th scope="col"></th>
+                  </tr>
+                </thead>
+                <tbody class="table-group-divider" id="expensesTable">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="mt-5 settle-up-table">
+      <h2 class="m-3">Settle Up</h2>
+      <ul class="list-group" id="settleUpListGrp">
+      </ul>
+    </div>
+      <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+      <script src="script.js"></script>
+</body>
+</html>
