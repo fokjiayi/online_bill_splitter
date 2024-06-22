@@ -5,13 +5,29 @@ document.addEventListener('DOMContentLoaded', (event) => {
         updateExpenses();
     }
 
+    const createNewExpense = document.getElementById('newExpenseBtn');
     const inputBox = document.getElementById('namesInput');
+
+    const expenseModal = new bootstrap.Modal(document.getElementById('expenseModal'), {
+        keyboard: true
+    });
+
     const paidBySelect = document.getElementById('expensePaidBy');
     const splitByDropdown = document.getElementById('splitByDropdown');
     const addExpenseBtn = document.getElementById('addExpense');
     const deleteRecordBtns = document.querySelectorAll('button.delete');
     const settleUpBtn = document.getElementById('settleUpBtn');
     const settleUpListGrp = document.getElementById('settleUpListGrp');
+
+    createNewExpense.addEventListener('click', () => {
+        console.log(names)
+        if (names.length == 0){
+            alert("Please enter the names before adding an expense")
+        }
+        else{
+            expenseModal.show();
+        }
+    });
 
     // get the names of all involved and dynamically add the names to the lists for paidBy and splitByDropdown
     inputBox.addEventListener('input', (event) => {
@@ -44,7 +60,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
         const splitByArr = [];
         for (checkbox of eSplitBy){
             if (checkbox.checked && checkbox.value == "all") {
-                splitByArr.push(checkbox.value);
+                splitByArr.push(...names);
                 break;
             }
             else if(checkbox.checked){
@@ -61,29 +77,24 @@ document.addEventListener('DOMContentLoaded', (event) => {
         expenses.push(oneExpense);
         sessionStorage.setItem('expenses', JSON.stringify(expenses));
         updateExpenses(oneExpense);
+
         console.log(`${eName}, ${eAmt}, ${ePaidBy}, ${splitByArr.join(', ')}`)
-    });
-
-    deleteRecordBtns.forEach(button => {
-        button.addEventListener('click', (event) => {
-            // You can get the button that was clicked using event.target
-            const buttonClicked = event.target;
-            console.log(event.target.value)
-
-            // Perform the desired action, here we just log the button's text content
-            // output.innerHTML = `You clicked: ${buttonClicked.textContent}`;
-        });
+        document.getElementById('expenseName').textContent = ""
+        document.getElementById('expenseAmount').textContent = ""
+        ePaidBy = "Paid By"
+        expenseModal.hide();
     });
 
     // get the names of all involved and dynamically add the names to the lists for paidBy and splitByDropdown
     settleUpBtn.addEventListener('click', (event) => {
-        console.log('Input value:', event.target);
+        // console.log('Input value:', event.target);
         let debt = settleDebts();
 
     });
 
     function updateExpenses(oneExpense = null){
         let expensesTable = document.getElementById('expensesTable');
+        let expensesCards = document.getElementById('expensesCards');
         if (oneExpense){
             // if a new expense is passed in then just add on to the table
             expensesTable.innerHTML += `<tr>
@@ -93,10 +104,36 @@ document.addEventListener('DOMContentLoaded', (event) => {
                                             <td>${oneExpense["splitBy"]}</td>
                                             <td><button type="button" class="btn btn-danger col ms-2 delete" value="${oneExpense["index"]}"><i class="bi-x"></i></button></td>
                                         </tr>`
-        }
+
+            expensesCards.innerHTML += `<div class="card w-100 mb-2" style="width: 18rem;">
+                                            <div class="card-body">
+                                                <h5 class="card-title d-flex">
+                                                    <span class="flex-fill">${oneExpense["name"]}</span>
+                                                    <button type="button" class="btn btn-danger ms-2 delete" value="${oneExpense["index"]}"><i class="bi-x"></i></button>
+                                                </h5>
+                                                <div class="card-text">
+                                                        <div class="mb-2">
+                                                            <label for="expenseNameMobile" class="form-label">Amount</label>
+                                                            <input type="text" class="form-control" id="expenseNameMobile" value="${oneExpense["amount"]}">
+                                                        </div>
+                                                        <div class="mb-2">
+                                                            <label for="paidByMobile" class="form-label">Paid By</label>
+                                                            <input type="text" class="form-control" id="paidByMobile" disabled value="${oneExpense["paidBy"]}">
+                                                        </div>
+                                                        <div class="mb-2">
+                                                            <label for="splitByMobile" class="form-label">Split Between</label>
+                                                            <input type="text" class="form-control" id="splitByMobile" disabled value="${oneExpense["splitBy"]}">
+                                                        </div>
+                                                </div>
+                                            </div>
+                                        </div>`
+    }
         else{
+            expensesTable.innerHTML = ""
+            expensesCards.innerHTML = ""
             // if its a refresh, populate table with data
             for (expense of expenses){
+                console.log(expense)
                 expensesTable.innerHTML += `<tr>
                                                 <th>${expense["name"]}</th>
                                                 <td>${expense["amount"]}</td>
@@ -104,12 +141,53 @@ document.addEventListener('DOMContentLoaded', (event) => {
                                                 <td>${expense["splitBy"]}</td>
                                                 <td><button type="button" class="btn btn-danger col ms-2 delete" value="${expense["index"]}"><i class="bi-x"></i></button></td>
                                             </tr>`
+                expensesCards.innerHTML += `<div class="card w-100 mb-3" style="width: 18rem;">
+                                                <div class="card-body">
+                                                    <h5 class="card-title d-flex">
+                                                        <span class="flex-fill">${expense["name"]}</span>
+                                                        <button type="button" class="btn btn-danger ms-2 delete" value="${expense["index"]}"><i class="bi-x"></i></button>
+                                                    </h5>
+                                                    <div class="card-text">
+                                                        <div class="mb-2">
+                                                            <label for="expenseNameMobile" class="form-label">Amount</label>
+                                                            <input type="text" class="form-control" id="expenseNameMobile" value="${expense["amount"]}">
+                                                        </div>
+                                                        <div class="mb-2">
+                                                            <label for="paidByMobile" class="form-label">Paid By</label>
+                                                            <input type="text" class="form-control" id="paidByMobile" disabled value="${expense["paidBy"]}">
+                                                        </div>
+                                                        <div class="mb-2">
+                                                            <label for="splitByMobile" class="form-label">Split Between</label>
+                                                            <input type="text" class="form-control" id="splitByMobile" disabled value="${expense["splitBy"]}">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>`
             }
         }
+        addDeleteEventListeners();
 
     }
 
+    
+    function addDeleteEventListeners() {
+        const deleteButtons = document.querySelectorAll('.delete');
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', (event) => {
+                const indexToDelete = parseInt(event.target.closest('button').value);
+                deleteExpense(indexToDelete);
+            });
+        });
+    }
+    
+    function deleteExpense(index) {
+        expenses = expenses.filter(expense => expense.index !== index);
+        updateExpenses();
+        sessionStorage.setItem('expenses', JSON.stringify(expenses));
+    }
+
     function settleDebts() {
+        console.log(expenses)
         const transactions = expenses;
         const balances = {};
 
@@ -171,6 +249,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
                             "creditor":creditor,
                             "payment":payment.toFixed(2)
                         }
+                        console.log(`${debtor} pays ${creditor}: $${payment.toFixed(2)}`)
                         settleUpListGrp.innerHTML += `<li class="list-group-item p-3">${debtor} pays ${creditor}: $${payment.toFixed(2)}</li>`
                         // owesList.push(`${debtor} owes ${creditor}: $${payment.toFixed(2)}`);
                         owesList.push(oneOwe);
@@ -180,7 +259,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 }
             }
         }
-
-        return owesList;
+        document.getElementById('settle-up-table').scrollIntoView({ behavior: 'smooth' });
     } 
 });
