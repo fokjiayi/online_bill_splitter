@@ -29,6 +29,23 @@ document.addEventListener('DOMContentLoaded', (event) => {
         }
     });
 
+    const amountInput = document.getElementById('expenseAmount');
+
+    amountInput.addEventListener('change', () => {
+        console.log(amountInput.value)
+        if (amountInput.value < 0){
+            console.log("error shld show")
+            document.getElementById('amtErrorMsg').classList.remove("d-none")
+            document.getElementById('addExpense').setAttribute("disabled", true)
+        }
+        else{
+            console.log("error not shown")
+
+            document.getElementById('amtErrorMsg').classList.add("d-none")
+            document.getElementById('addExpense').removeAttribute("disabled", true)
+        }
+    });
+
     // get the names of all involved and dynamically add the names to the lists for paidBy and splitByDropdown
     inputBox.addEventListener('input', (event) => {
         console.log('Input value:', event.target.value);
