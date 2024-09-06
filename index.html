@@ -48,12 +48,33 @@
                     <i class="bi-upload me-2"></i>
                     Upload receipt
                 </button>
-                <button type="button" class="btn btn-success col-sm-10 col-md-3 ms-sm-2 mb-sm-2" id="settleUpBtn">
+                <button type="button" class="btn btn-success col-sm-10 col-md-3 mx-sm-2 mb-sm-2" id="settleUpBtn">
                     <i class="bi-cash me-2"></i>
                     Settle up
                 </button>
+                <button type="button" class="btn btn-danger col-sm-5 col-md-3 mx-sm-2 mb-sm-2" id="resetBtn"  data-bs-toggle="modal" data-bs-target="#cfmResetModal">
+                  <i class="bi bi-arrow-clockwise"></i>
+                  Reset splitter
+              </button>
             </div>
         </div>
+    </div>
+    <!-- Confirm reset modal -->
+    <div class="modal fade" id="cfmResetModal" tabindex="-1" aria-labelledby="cfmResetModal" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel"></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            Do you want to remove all inputs and reset this splitter? 
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-danger" id="resetSplitter">Yes</button>
+          </div>
+        </div>
+      </div>
     </div>
     <!-- Add expense modal -->
     <div class="modal fade" id="expenseModal" tabindex="-1" aria-labelledby="expenseModal" aria-hidden="true">

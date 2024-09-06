@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     }
 
     const createNewExpense = document.getElementById('newExpenseBtn');
+    const resetSplitter = document.getElementById('resetSplitter');
     const inputBox = document.getElementById('namesInput');
 
     const expenseModal = new bootstrap.Modal(document.getElementById('expenseModal'), {
@@ -18,6 +19,15 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const deleteRecordBtns = document.querySelectorAll('button.delete');
     const settleUpBtn = document.getElementById('settleUpBtn');
     const settleUpListGrp = document.getElementById('settleUpListGrp');
+
+    resetSplitter.addEventListener('click', () => {
+        console.log("Reset splitter")
+        names = []
+        sessionStorage.removeItem('expenses')
+        setTimeout(()=>{
+            location.reload();
+        }, 500);
+    });
 
     createNewExpense.addEventListener('click', () => {
         console.log(names)
