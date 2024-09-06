@@ -186,11 +186,11 @@ document.addEventListener('DOMContentLoaded', (event) => {
                                                     <div class="card-text">
                                                         <div class="mb-2">
                                                             <label for="expenseAmtMobile" class="form-label">Amount</label>
-                                                            <input type="text" class="form-control" id="expenseAmtMobile" value="${expense["amount"]}">
+                                                            <input type="text" class="form-control" id="expenseAmtMobile" disabled value="${expense["amount"]}">
                                                         </div>
                                                         <div class="mb-2">
                                                             <label for="expenseGstMobile" class="form-label">Amount</label>
-                                                            <input type="text" class="form-control" id="expenseGstMobile" value="${expense["gst"]}">
+                                                            <input type="text" class="form-control" id="expenseGstMobile" disabled value="${expense["gst"]}">
                                                         </div>
                                                         <div class="mb-2">
                                                             <label for="paidByMobile" class="form-label">Paid By</label>
