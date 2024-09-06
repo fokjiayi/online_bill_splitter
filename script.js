@@ -145,11 +145,11 @@ document.addEventListener('DOMContentLoaded', (event) => {
                                                 <div class="card-text">
                                                         <div class="mb-2">
                                                             <label for="expenseAmtMobile" class="form-label">Amount</label>
-                                                            <input type="text" class="form-control" id="expenseAmtMobile" value="${oneExpense["amount"]}">
+                                                            <input type="text" class="form-control" id="expenseAmtMobile" disabled value="${oneExpense["amount"]}">
                                                         </div>
                                                         <div class="mb-2">
                                                             <label for="expenseGstMobile" class="form-label">Include GST</label>
-                                                            <input type="text" class="form-control" id="expenseNameMobile" value="${oneExpense["gst"]}">
+                                                            <input type="text" class="form-control" id="expenseNameMobile" disabled value="${oneExpense["gst"]}">
                                                         </div>
                                                         <div class="mb-2">
                                                             <label for="paidByMobile" class="form-label">Paid By</label>
