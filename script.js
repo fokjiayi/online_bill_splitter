@@ -72,6 +72,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
         console.log("clicked add expense")
         let eName = document.getElementById('expenseName').value;
         let eAmt = document.getElementById('expenseAmount').value;
+        let eGstCheck = document.getElementById('gstCheck').checked;
+        let eGstAmt = document.getElementById('gstAmount').value;
         let ePaidBy = document.getElementById('expensePaidBy').value;
         let eSplitBy = document.querySelectorAll('#splitByDropdown .form-check-input');
         const splitByArr = [];
@@ -88,6 +90,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
             "index": expenses.length,
             "name": eName,
             "amount": eAmt,
+            "gst": eGstCheck ? eGstAmt : 1,
             "paidBy": ePaidBy,
             "splitBy": splitByArr
         }
@@ -95,9 +98,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
         sessionStorage.setItem('expenses', JSON.stringify(expenses));
         updateExpenses(oneExpense);
 
-        console.log(`${eName}, ${eAmt}, ${ePaidBy}, ${splitByArr.join(', ')}`)
-        document.getElementById('expenseName').textContent = ""
-        document.getElementById('expenseAmount').textContent = ""
+        console.log(`${eName}, ${eAmt}, ${eGstAmt}, ${ePaidBy}, ${splitByArr.join(', ')}`)
+        document.getElementById('expenseName').value = ""
+        document.getElementById('expenseAmount').value = ""
         ePaidBy = "Paid By"
         expenseModal.hide();
     });
@@ -117,6 +120,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
             expensesTable.innerHTML += `<tr>
                                             <th scope="row">${oneExpense["name"]}</th>
                                             <td>${oneExpense["amount"]}</td>
+                                            <td>${oneExpense["gst"]}</td>
                                             <td>${oneExpense["paidBy"]}</td>
                                             <td>${oneExpense["splitBy"]}</td>
                                             <td><button type="button" class="btn btn-danger col ms-2 delete" value="${oneExpense["index"]}"><i class="bi-x"></i></button></td>
@@ -130,8 +134,12 @@ document.addEventListener('DOMContentLoaded', (event) => {
                                                 </h5>
                                                 <div class="card-text">
                                                         <div class="mb-2">
-                                                            <label for="expenseNameMobile" class="form-label">Amount</label>
-                                                            <input type="text" class="form-control" id="expenseNameMobile" value="${oneExpense["amount"]}">
+                                                            <label for="expenseAmtMobile" class="form-label">Amount</label>
+                                                            <input type="text" class="form-control" id="expenseAmtMobile" value="${oneExpense["amount"]}">
+                                                        </div>
+                                                        <div class="mb-2">
+                                                            <label for="expenseGstMobile" class="form-label">Include GST</label>
+                                                            <input type="text" class="form-control" id="expenseNameMobile" value="${oneExpense["gst"]}">
                                                         </div>
                                                         <div class="mb-2">
                                                             <label for="paidByMobile" class="form-label">Paid By</label>
@@ -154,6 +162,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 expensesTable.innerHTML += `<tr>
                                                 <th>${expense["name"]}</th>
                                                 <td>${expense["amount"]}</td>
+                                                <td>${expense["gst"]}</td>
                                                 <td>${expense["paidBy"]}</td>
                                                 <td>${expense["splitBy"]}</td>
                                                 <td><button type="button" class="btn btn-danger col ms-2 delete" value="${expense["index"]}"><i class="bi-x"></i></button></td>
@@ -166,8 +175,12 @@ document.addEventListener('DOMContentLoaded', (event) => {
                                                     </h5>
                                                     <div class="card-text">
                                                         <div class="mb-2">
-                                                            <label for="expenseNameMobile" class="form-label">Amount</label>
-                                                            <input type="text" class="form-control" id="expenseNameMobile" value="${expense["amount"]}">
+                                                            <label for="expenseAmtMobile" class="form-label">Amount</label>
+                                                            <input type="text" class="form-control" id="expenseAmtMobile" value="${expense["amount"]}">
+                                                        </div>
+                                                        <div class="mb-2">
+                                                            <label for="expenseGstMobile" class="form-label">Amount</label>
+                                                            <input type="text" class="form-control" id="expenseGstMobile" value="${expense["gst"]}">
                                                         </div>
                                                         <div class="mb-2">
                                                             <label for="paidByMobile" class="form-label">Paid By</label>
@@ -210,7 +223,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
         // Calculate balances
         transactions.forEach(transaction => {
-            const amount = parseFloat(transaction.amount);
+            const amount = parseFloat(transaction.amount) * parseFloat(transaction.gst);
             const splitBy = transaction.splitBy;
             const paidBy = transaction.paidBy;
             
