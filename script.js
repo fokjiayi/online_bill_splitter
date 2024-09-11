@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', (event) => {
-    let names = []
+    let names = sessionStorage.getItem("names") ? sessionStorage.getItem("names") : []
     let expenses = JSON.parse(sessionStorage.getItem('expenses')) ? JSON.parse(sessionStorage.getItem('expenses')) : []
     if (expenses.length > 0) {
         updateExpenses();
@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     const createNewExpense = document.getElementById('newExpenseBtn');
     const resetSplitter = document.getElementById('resetSplitter');
     const inputBox = document.getElementById('namesInput');
+    inputBox.value = sessionStorage.getItem('names') ? JSON.parse(sessionStorage.getItem('names')) : "";
 
     const expenseModal = new bootstrap.Modal(document.getElementById('expenseModal'), {
         keyboard: true
@@ -22,8 +23,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     resetSplitter.addEventListener('click', () => {
         console.log("Reset splitter")
-        names = []
         sessionStorage.removeItem('expenses')
+        sessionStorage.removeItem('names')
         setTimeout(()=>{
             location.reload();
         }, 500);
@@ -35,9 +36,104 @@ document.addEventListener('DOMContentLoaded', (event) => {
             alert("Please enter the names before adding an expense")
         }
         else{
-            expenseModal.show();
+            showExpenseModal();
         }
     });
+    
+    function showExpenseModal(expense = null){
+        // if user clicks on 'add expense' button
+        if (!expense){
+            names = JSON.parse(sessionStorage.getItem('names'))
+    
+            document.getElementById('expenseName').value = "";
+            document.getElementById('expenseAmount').value = "";
+            document.getElementById('gstCheck').checked = false;
+            document.getElementById('gstAmount').value = 1.19;
+
+            // update the names list in the split by popup
+            paidBySelect.innerHTML = `<option selected>Paid By</option>`
+            splitByDropdown.innerHTML = `<li class="list-group-item">
+                                            <input class="form-check-input me-1" type="checkbox" value="all">
+                                            <label class="form-check-label">All (${names.length})</label>
+                                        </li>`
+            for (name of names) {
+                paidBySelect.innerHTML += `<option value='${name}'>${name}</option>\n`
+                splitByDropdown.innerHTML += `<li class="list-group-item">
+                                                <input class="form-check-input me-1" type="checkbox" value="${name}">
+                                                <label class="form-check-label">${name}</label>
+                                            </li>`
+            }
+            addExpenseBtn.textContent = "Add"
+        }
+        // if user clicks on 'edit expense' button
+        else{
+            document.getElementById('expenseName').value = expense.name;
+            document.getElementById('expenseAmount').value = expense.amount;
+            document.getElementById('gstCheck').checked = expense.gst == 1 ? false : true;
+            document.getElementById('gstAmount').value = expense.gst;
+            document.getElementById('expensePaidBy').value = expense.paidBy;
+            let allIsChecked = false
+            namesInput = document.getElementById('namesInput').value;
+            names = namesInput.replace(/\s+/g, '').split(",")
+            // update the names list in the split by popup
+            paidBySelect.innerHTML = `<option selected>Paid By</option>`
+            if (expense.splitBy.length == names.length){
+                splitByDropdown.innerHTML = `<li class="list-group-item">
+                                                <input class="form-check-input me-1" type="checkbox" value="all" checked>
+                                                <label class="form-check-label">All (${names.length})</label>
+                                            </li>`
+                allIsChecked = true
+            }
+            else{
+                splitByDropdown.innerHTML = `<li class="list-group-item">
+                                                <input class="form-check-input me-1" type="checkbox" value="all">
+                                                <label class="form-check-label">All (${names.length})</label>
+                                            </li>`
+            }
+            for (name of names) {
+                if (name == expense.paidBy){
+                    paidBySelect.innerHTML += `<option value='${name}' selected>${name}</option>\n`
+                }
+                else{
+                    paidBySelect.innerHTML += `<option value='${name}'  >${name}</option>\n`
+                }
+                if (!allIsChecked && expense.splitBy.includes(name)){
+                    splitByDropdown.innerHTML += `<li class="list-group-item">
+                                                    <input class="form-check-input me-1" type="checkbox" value="${name}" checked>
+                                                    <label class="form-check-label">${name}</label>
+                                                </li>`
+                }else{
+                    splitByDropdown.innerHTML += `<li class="list-group-item">
+                                                    <input class="form-check-input me-1" type="checkbox" value="${name}">
+                                                    <label class="form-check-label">${name}</label>
+                                                </li>`
+                }
+    
+            }
+    
+            let eSplitBy = document.querySelectorAll('#splitByDropdown .form-check-input');
+            const splitByArr = [];
+            for (checkbox of eSplitBy){
+                if (eSplitBy.length - 1 == splitByArr.length){
+                    if (checkbox.value == "all"){
+                        checkbox.checked = true
+                        break;
+                    }
+                }
+                else if (checkbox.value in splitByArr){
+                    checkbox.checked = true
+                }
+            }
+
+            addExpenseBtn.textContent = "Update"
+            addExpenseBtn.value = expense.index
+    
+    
+            // updateExpenses();
+            // sessionStorage.setItem('expenses', JSON.stringify(expenses));
+        }
+        expenseModal.show();
+    }
 
     const amountInput = document.getElementById('expenseAmount');
 
@@ -61,6 +157,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
         console.log('Input value:', event.target.value);
         let namesStr = event.target.value.replace(/\s+/g, '');
         names = namesStr.split(',')
+        sessionStorage.setItem('names', JSON.stringify(names))
 
         // update the names list in the split by popup
         paidBySelect.innerHTML = `<option selected>Paid By</option>`
@@ -79,7 +176,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     // create new expense and add them to the table / card  
     addExpenseBtn.addEventListener('click', (event) => {
-        console.log("clicked add expense")
         let eName = document.getElementById('expenseName').value;
         let eAmt = document.getElementById('expenseAmount').value;
         let eGstCheck = document.getElementById('gstCheck').checked;
@@ -104,14 +200,25 @@ document.addEventListener('DOMContentLoaded', (event) => {
             "paidBy": ePaidBy,
             "splitBy": splitByArr
         }
-        expenses.push(oneExpense);
+        if (addExpenseBtn.textContent == "Add"){
+            expenses.push(oneExpense);
+        }
+        else{
+            expenses = JSON.parse(sessionStorage.getItem('expenses'));
+            for (let i=0; i<expenses.length; i++){
+                if (expenses[i].index == addExpenseBtn.value){
+                    expenses[i] = oneExpense
+                }
+            }
+        }
         sessionStorage.setItem('expenses', JSON.stringify(expenses));
-        updateExpenses(oneExpense);
+        updateExpenses();
 
         console.log(`${eName}, ${eAmt}, ${eGstAmt}, ${ePaidBy}, ${splitByArr.join(', ')}`)
         document.getElementById('expenseName').value = ""
         document.getElementById('expenseAmount').value = ""
         ePaidBy = "Paid By"
+        settleUpListGrp.innerHTML = ""
         expenseModal.hide();
     });
 
@@ -122,7 +229,9 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     });
 
+    // for when the user creates a new expense or whem the page is refreshed
     function updateExpenses(oneExpense = null){
+        expenses = JSON.parse(sessionStorage.getItem('expenses'));
         let expensesTable = document.getElementById('expensesTable');
         let expensesCards = document.getElementById('expensesCards');
         if (oneExpense){
@@ -133,6 +242,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
                                             <td>${oneExpense["gst"]}</td>
                                             <td>${oneExpense["paidBy"]}</td>
                                             <td>${oneExpense["splitBy"]}</td>
+                                            <td><button type="button" class="btn btn-secondary col ms-2 edit" value="${oneExpense["index"]}"><i class="bi-pencil-square"></i></button></td>
                                             <td><button type="button" class="btn btn-danger col ms-2 delete" value="${oneExpense["index"]}"><i class="bi-x"></i></button></td>
                                         </tr>`
 
@@ -140,6 +250,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
                                             <div class="card-body">
                                                 <h5 class="card-title d-flex">
                                                     <span class="flex-fill">${oneExpense["name"]}</span>
+                                                    <button type="button" class="btn btn-secondary ms-2 edit" value="${oneExpense["index"]}"><i class="bi-pencil-square"></i></button>
                                                     <button type="button" class="btn btn-danger ms-2 delete" value="${oneExpense["index"]}"><i class="bi-x"></i></button>
                                                 </h5>
                                                 <div class="card-text">
@@ -175,12 +286,14 @@ document.addEventListener('DOMContentLoaded', (event) => {
                                                 <td>${expense["gst"]}</td>
                                                 <td>${expense["paidBy"]}</td>
                                                 <td>${expense["splitBy"]}</td>
+                                                <td><button type="button" class="btn btn-secondary col ms-2 edit" value="${expense["index"]}"><i class="bi-pencil-square"></i></button></td>
                                                 <td><button type="button" class="btn btn-danger col ms-2 delete" value="${expense["index"]}"><i class="bi-x"></i></button></td>
                                             </tr>`
                 expensesCards.innerHTML += `<div class="card w-100 mb-3" style="width: 18rem;">
                                                 <div class="card-body">
                                                     <h5 class="card-title d-flex">
                                                         <span class="flex-fill">${expense["name"]}</span>
+                                                        <button type="button" class="btn btn-secondary ms-2 edit" value="${expense["index"]}"><i class="bi-pencil-square"></i></button>
                                                         <button type="button" class="btn btn-danger ms-2 delete" value="${expense["index"]}"><i class="bi-x"></i></button>
                                                     </h5>
                                                     <div class="card-text">
@@ -206,6 +319,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
             }
         }
         addDeleteEventListeners();
+        addEditEventListeners();
 
     }
 
@@ -219,11 +333,27 @@ document.addEventListener('DOMContentLoaded', (event) => {
             });
         });
     }
-    
+
     function deleteExpense(index) {
         expenses = expenses.filter(expense => expense.index !== index);
         updateExpenses();
         sessionStorage.setItem('expenses', JSON.stringify(expenses));
+    }
+
+    function addEditEventListeners() {
+        const editButtons = document.querySelectorAll('.edit');
+        editButtons.forEach(button => {
+            button.addEventListener('click', (event) => {
+                const indexToEdit = parseInt(event.target.closest('button').value);
+                editExpense(indexToEdit);
+            });
+        });
+    }
+
+    function editExpense(index) {
+        expenseModal.show();
+        expense = expenses.filter(expense => expense.index == index)[0];
+        showExpenseModal(expense)
     }
 
     function settleDebts() {
