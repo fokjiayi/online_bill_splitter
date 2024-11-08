@@ -336,8 +336,8 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     function deleteExpense(index) {
         expenses = expenses.filter(expense => expense.index !== index);
-        updateExpenses();
         sessionStorage.setItem('expenses', JSON.stringify(expenses));
+        updateExpenses();
     }
 
     function addEditEventListeners() {
