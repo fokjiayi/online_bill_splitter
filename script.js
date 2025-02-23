@@ -302,7 +302,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
                                                             <input type="text" class="form-control" id="expenseAmtMobile" disabled value="${expense["amount"]}">
                                                         </div>
                                                         <div class="mb-2">
-                                                            <label for="expenseGstMobile" class="form-label">Amount</label>
+                                                            <label for="expenseGstMobile" class="form-label">Include GST</label>
                                                             <input type="text" class="form-control" id="expenseGstMobile" disabled value="${expense["gst"]}">
                                                         </div>
                                                         <div class="mb-2">
