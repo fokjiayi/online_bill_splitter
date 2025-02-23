@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     });
     
     function showExpenseModal(expense = null){
-        // if user clicks on 'add expense' button
+        // if user is adding a new expense
         if (!expense){
             names = JSON.parse(sessionStorage.getItem('names'))
     
@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
             }
             addExpenseBtn.textContent = "Add"
         }
-        // if user clicks on 'edit expense' button
+        // if user is editing an existing expense
         else{
             document.getElementById('expenseName').value = expense.name;
             document.getElementById('expenseAmount').value = expense.amount;
@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
             }
 
             addExpenseBtn.textContent = "Update"
-            addExpenseBtn.value = expense.index
+            addExpenseBtn.value = expense.id
     
     
             // updateExpenses();
@@ -192,8 +192,10 @@ document.addEventListener('DOMContentLoaded', (event) => {
                 splitByArr.push(checkbox.value);
             }
         }
+        console.log("addExpenseBtn:", addExpenseBtn)
         let oneExpense = {
-            "index": expenses.length,
+            // reuse if user is editing expense, create new id if user is creating a new expense 
+            "id": addExpenseBtn.value != "" ? addExpenseBtn.value : generateRandomId(),
             "name": eName,
             "amount": eAmt,
             "gst": eGstCheck ? eGstAmt : 1,
@@ -206,7 +208,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
         else{
             expenses = JSON.parse(sessionStorage.getItem('expenses'));
             for (let i=0; i<expenses.length; i++){
-                if (expenses[i].index == addExpenseBtn.value){
+                if (expenses[i].id == addExpenseBtn.value){
                     expenses[i] = oneExpense
                 }
             }
@@ -242,16 +244,16 @@ document.addEventListener('DOMContentLoaded', (event) => {
                                             <td>${oneExpense["gst"]}</td>
                                             <td>${oneExpense["paidBy"]}</td>
                                             <td>${oneExpense["splitBy"]}</td>
-                                            <td><button type="button" class="btn btn-secondary col ms-2 edit" value="${oneExpense["index"]}"><i class="bi-pencil-square"></i></button></td>
-                                            <td><button type="button" class="btn btn-danger col ms-2 delete" value="${oneExpense["index"]}"><i class="bi-x"></i></button></td>
+                                            <td><button type="button" class="btn btn-secondary col ms-2 edit" value="${oneExpense["id"]}"><i class="bi-pencil-square"></i></button></td>
+                                            <td><button type="button" class="btn btn-danger col ms-2 delete" value="${oneExpense["id"]}"><i class="bi-x"></i></button></td>
                                         </tr>`
 
             expensesCards.innerHTML += `<div class="card w-100 mb-2" style="width: 18rem;">
                                             <div class="card-body">
                                                 <h5 class="card-title d-flex">
                                                     <span class="flex-fill">${oneExpense["name"]}</span>
-                                                    <button type="button" class="btn btn-secondary ms-2 edit" value="${oneExpense["index"]}"><i class="bi-pencil-square"></i></button>
-                                                    <button type="button" class="btn btn-danger ms-2 delete" value="${oneExpense["index"]}"><i class="bi-x"></i></button>
+                                                    <button type="button" class="btn btn-secondary ms-2 edit" value="${oneExpense["id"]}"><i class="bi-pencil-square"></i></button>
+                                                    <button type="button" class="btn btn-danger ms-2 delete" value="${oneExpense["id"]}"><i class="bi-x"></i></button>
                                                 </h5>
                                                 <div class="card-text">
                                                         <div class="mb-2">
@@ -286,15 +288,15 @@ document.addEventListener('DOMContentLoaded', (event) => {
                                                 <td>${expense["gst"]}</td>
                                                 <td>${expense["paidBy"]}</td>
                                                 <td>${expense["splitBy"]}</td>
-                                                <td><button type="button" class="btn btn-secondary col ms-2 edit" value="${expense["index"]}"><i class="bi-pencil-square"></i></button></td>
-                                                <td><button type="button" class="btn btn-danger col ms-2 delete" value="${expense["index"]}"><i class="bi-x"></i></button></td>
+                                                <td><button type="button" class="btn btn-secondary col ms-2 edit" value="${expense["id"]}"><i class="bi-pencil-square"></i></button></td>
+                                                <td><button type="button" class="btn btn-danger col ms-2 delete" value="${expense["id"]}"><i class="bi-x"></i></button></td>
                                             </tr>`
                 expensesCards.innerHTML += `<div class="card w-100 mb-3" style="width: 18rem;">
                                                 <div class="card-body">
                                                     <h5 class="card-title d-flex">
                                                         <span class="flex-fill">${expense["name"]}</span>
-                                                        <button type="button" class="btn btn-secondary ms-2 edit" value="${expense["index"]}"><i class="bi-pencil-square"></i></button>
-                                                        <button type="button" class="btn btn-danger ms-2 delete" value="${expense["index"]}"><i class="bi-x"></i></button>
+                                                        <button type="button" class="btn btn-secondary ms-2 edit" value="${expense["id"]}"><i class="bi-pencil-square"></i></button>
+                                                        <button type="button" class="btn btn-danger ms-2 delete" value="${expense["id"]}"><i class="bi-x"></i></button>
                                                     </h5>
                                                     <div class="card-text">
                                                         <div class="mb-2">
@@ -328,14 +330,14 @@ document.addEventListener('DOMContentLoaded', (event) => {
         const deleteButtons = document.querySelectorAll('.delete');
         deleteButtons.forEach(button => {
             button.addEventListener('click', (event) => {
-                const indexToDelete = parseInt(event.target.closest('button').value);
-                deleteExpense(indexToDelete);
+                const idToDelete = event.target.closest('button').value;
+                deleteExpense(idToDelete);
             });
         });
     }
 
-    function deleteExpense(index) {
-        expenses = expenses.filter(expense => expense.index !== index);
+    function deleteExpense(id) {
+        expenses = expenses.filter(expense => expense.id !== id);
         sessionStorage.setItem('expenses', JSON.stringify(expenses));
         updateExpenses();
     }
@@ -344,15 +346,16 @@ document.addEventListener('DOMContentLoaded', (event) => {
         const editButtons = document.querySelectorAll('.edit');
         editButtons.forEach(button => {
             button.addEventListener('click', (event) => {
-                const indexToEdit = parseInt(event.target.closest('button').value);
-                editExpense(indexToEdit);
+                const idToEdit = event.target.closest('button').value;
+                editExpense(idToEdit);
             });
         });
     }
 
-    function editExpense(index) {
+    function editExpense(id) {
         expenseModal.show();
-        expense = expenses.filter(expense => expense.index == index)[0];
+        expense = expenses.filter(expense => expense.id == id)[0];
+        console.log("Exp", expense)
         showExpenseModal(expense)
     }
 
@@ -431,4 +434,16 @@ document.addEventListener('DOMContentLoaded', (event) => {
         }
         document.getElementById('settle-up-table').scrollIntoView({ behavior: 'smooth' });
     } 
+
+    // generate a random id for each expense
+    function generateRandomId(length = 10) {
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = '';
+        for (let i = 0; i < length; i++) {
+            result += characters.charAt(Math.floor(Math.random() * characters.length));
+        }
+        return result;
+    }
+    
+    
 });
