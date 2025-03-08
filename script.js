@@ -366,7 +366,13 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
         // Calculate balances
         transactions.forEach(transaction => {
-            const amount = parseFloat(transaction.amount) * parseFloat(transaction.gst);
+            // if gst is 1.19, calculate total after svc, then calculate after gst
+            // otherwise, just multiply by the whole gst amount
+            let amount = parseFloat(transaction.amount) * parseFloat(transaction.gst);
+            if (transaction.gst == 1.19) {
+                amount = parseFloat(transaction.amount) * 1.10;
+                amount += parseFloat(transaction.amount) * 1.09
+            }
             const splitBy = transaction.splitBy;
             const paidBy = transaction.paidBy;
             
