@@ -371,7 +371,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
             let amount = parseFloat(transaction.amount) * parseFloat(transaction.gst);
             if (transaction.gst == 1.19) {
                 amount = parseFloat(transaction.amount) * 1.10;
-                amount += parseFloat(transaction.amount) * 0.09
+                amount += parseFloat(amount) * 0.09
             }
             const splitBy = transaction.splitBy;
             const paidBy = transaction.paidBy;
