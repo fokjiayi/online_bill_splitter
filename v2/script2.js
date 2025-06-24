@@ -711,3 +711,12 @@ function resetSplitterState() {
   }
 }
 
+// --- Add Participant Button ---
+const addParticipantBtn = document.getElementById('addParticipantBtn');
+addParticipantBtn.addEventListener('click', function() {
+  if (participantInput.value.trim()) {
+    addParticipant(participantInput.value.trim());
+    participantInput.value = '';
+  }
+});
+

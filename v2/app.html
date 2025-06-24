@@ -144,14 +144,17 @@
             <!-- Participants -->
             <div class="mb-3">
               <label for="participantInput" class="form-label"
-                >Add participant names (press Enter after each):</label
+                >Add participant names (press Enter or click Add):</label
               >
-              <input
-                type="text"
-                id="participantInput"
-                class="form-control"
-                placeholder="e.g. Alice"
-              />
+              <div class="input-group">
+                <input
+                  type="text"
+                  id="participantInput"
+                  class="form-control"
+                  placeholder="e.g. Alice"
+                />
+                <button class="btn btn-outline-success" id="addParticipantBtn" type="button">Add</button>
+              </div>
               <div id="participantsChips" class="mt-2"></div>
             </div>
             <!-- Session Type -->
