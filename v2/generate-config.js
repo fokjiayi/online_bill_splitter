@@ -9,5 +9,5 @@ window.SUPABASE_CONFIG = {
 };
 `;
 
-fs.writeFileSync('./public/config.js', configContent.trim(), 'utf8');
-console.log('✅ config.js generated.');
+fs.writeFileSync('./v2/config.js', configContent.trim(), 'utf8');
+console.log('✅ config.js generated in /v2');
