@@ -657,8 +657,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if ((sessionType === 'single' && sessions[0]) || (sessionType === 'multi' && sessions.length > 0)) {
       showCopyBtnAfterSessionCreate();
     }
-    // Only call resetSplitterState for button placement
-    resetSplitterState();
     return;
   }
   restoreSessionFromUrl();
@@ -686,6 +684,10 @@ document.getElementById('multiSessionNameInput').addEventListener('blur', functi
     renderMultiSessions();
     renderSessionTabs();
   }
+});
+
+document.getElementById('resetSplitterBtn').addEventListener('click', function() {
+  resetSplitterState();
 });
 
 // Only logic to reset the splitter, no DOM placement
