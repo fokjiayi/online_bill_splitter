@@ -1,19 +1,18 @@
-# Online bill splitter
+# Online bill splitter v2
 This is a bill splitter app that lets you track and split expenses easily! 
-https://ezsplit.netlify.app/
 
-### Current features 
-- Create, update and delete expenses
-- Reset splitter
-- Include service charges/GST in individual expenses
-- Settle bills
+### Overview of new & improved features
+| 🚀 Feature                  |📝 Description |
+|----------------------------|----------------|
+| 🗂️ **Session Management**   | Supports both single and multi-session use cases (e.g., for multi-day trips). |
+| 💰 **Expense Management**   | All expense data is stored in `localStorage` by default and can be synced with Supabase. |
+| 🔄 **Data Persistence & Sharing** | Data is saved in `localStorage` for persistence across reloads. Users can generate a shareable link for the current session to enable real-time collaboration. |
+| 🛠️ **Supabase Integration** | Includes a dedicated API layer for Supabase session and expense CRUD operations. Supports multi-session structure (parent/child). Real-time updates ensure changes are reflected in both Supabase and the UI. |
 
-### Possible new features 
-- Upload receipt
-- Account login
-- Sharing data-populated splitter
+### New User interface
+[Video Demo](https://youtu.be/HlLPL3xnAek)
+|Single session             | Multi-session    |
+|----------------------------|----------------|
+|![image](https://github.com/user-attachments/assets/7726f126-7ac1-4618-9bd5-8a2ea308be80)|![image](https://github.com/user-attachments/assets/4824690c-788b-4c3b-95fb-a4e89514d675)
+|
 
-
-Web version             | Mobile version
-:-------------------------|:-------------------------
-![image](https://github.com/user-attachments/assets/2342d693-e6c9-4e0c-b793-82129fb22fae) |  ![image](https://github.com/user-attachments/assets/111fcb22-d695-49a9-b003-8733c7bd87bc)
