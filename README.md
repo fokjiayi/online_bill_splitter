@@ -11,7 +11,7 @@ https://ezsplit.netlify.app/
 ### Possible new features 
 - Upload receipt
 - Account login
-- Sharing data-populated splitter ([available in v2](https://github.com/fokjiayi/online_bill_splitter/tree/main/v2]))
+- Sharing data-populated splitter ([available in v2](https://github.com/fokjiayi/online_bill_splitter/tree/main/v2))
 
 
 Web version             | Mobile version
