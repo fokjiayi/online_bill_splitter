@@ -1,6 +1,8 @@
 # Online bill splitter v2
 This is a bill splitter app that lets you track and split expenses easily! 
 
+Try version 2 now! https://ezsplit.netlify.app/v2/app.html 
+
 ### Overview of new & improved features
 | 🚀 Feature                  |📝 Description |
 |----------------------------|----------------|
