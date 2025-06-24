@@ -590,14 +590,15 @@ window.editExpense = function(idx) {
           name,
           amount,
           gst,
-          paid_by: PaidBy,
+          paid_by: paidBy,
           split_by: splitAmong
         });
       } catch (e) {
         alert('Failed to update expense in database.');
+        console.log(e)
       }
     }
-    exps[idx] = { ...exp, name, amount, gst, paid_by: PaidBy, split_by: splitAmong };
+    exps[idx] = { ...exp, name, amount, gst, paid_by: paidBy, split_by: splitAmong };
     expenses[sessionTitle] = exps;
     renderExpenseList();
     saveToLocal();
