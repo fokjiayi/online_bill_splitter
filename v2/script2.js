@@ -219,9 +219,11 @@ function safeHideModal(loadingModal, loadingModalEl) {
 
 // --- Share Session: Insert into Supabase and show link ---
 const copyBtn = document.getElementById('copySessionLinkBtn');
+const copyBtnCaption = document.getElementById('copySessionCaption');
 function showCopyBtn(sessionId) {
   if (!copyBtn) return;
   copyBtn.style.display = 'inline-block';
+  copyBtnCaption.style.display = 'inline-block';
   copyBtn.onclick = function() {
     const url = `${window.location.origin}${window.location.pathname}?sessionid=${sessionId}`;
     navigator.clipboard.writeText(url);
@@ -477,6 +479,7 @@ document.getElementById('settleUpBtn').onclick = function() {
 function showCopyBtnAfterSessionCreate() {
   if (!copyBtn) return;
   copyBtn.style.display = 'inline-block';
+  copyBtnCaption.style.display = 'inline-block';
   copyBtn.onclick = copyBtn.onclick || function() {
     const url = `${window.location.origin}${window.location.pathname}?sessionid=LOCAL`;
     navigator.clipboard.writeText(url);
