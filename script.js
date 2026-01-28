@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
             document.getElementById('expenseName').value = "";
             document.getElementById('expenseAmount').value = "";
             document.getElementById('gstCheck').checked = false;
-            document.getElementById('gstAmount').value = 1.19;
+            document.getElementById('gstAmount').value = 1.199;
 
             // update the names list in the split by popup
             paidBySelect.innerHTML = `<option selected>Paid By</option>`
