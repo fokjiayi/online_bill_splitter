@@ -563,7 +563,7 @@ window.editExpense = function(idx) {
   // Populate form fields for editing
   document.getElementById('expenseName').value = exp.name;
   document.getElementById('expenseAmount').value = exp.amount;
-  document.getElementById('expenseGst').value = exp.gst || 1.19;
+  document.getElementById('expenseGst').value = exp.gst || 1.199;
   document.getElementById('expensePaidBy').value = exp.paid_by || exp.paidBy;
   // Set checkboxes for split among
   const splitBy = exp.split_by || exp.splitBy || [];
@@ -578,7 +578,7 @@ window.editExpense = function(idx) {
     // Save changes
     const name = document.getElementById('expenseName').value.trim();
     const amount = parseFloat(document.getElementById('expenseAmount').value);
-    const gst = parseFloat(document.getElementById('expenseGst').value) || 1.19;
+    const gst = parseFloat(document.getElementById('expenseGst').value) || 1.199;
     const paidBy = document.getElementById('expensePaidBy').value;
     const splitAmong = Array.from(document.querySelectorAll('#splitAmongCheckboxes input:checked')).map(cb => cb.value);
     if (!name || isNaN(amount) || amount <= 0 || !paidBy || splitAmong.length === 0) {
@@ -608,7 +608,7 @@ window.editExpense = function(idx) {
     // Reset form and button
     document.getElementById('expenseName').value = '';
     document.getElementById('expenseAmount').value = '';
-    document.getElementById('expenseGst').value = '1.19';
+    document.getElementById('expenseGst').value = '1.199';
     addBtn.textContent = 'Add Expense';
     addBtn.onclick = originalAddExpenseHandler;
   };
