@@ -1,9 +1,88 @@
+// --- Debouncing Utility ---
+// Ensures functions don't fire too frequently, preventing excessive Firebase writes
+function debounce(func, delay) {
+  let timeoutId;
+  return function(...args) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+}
+
+// ============================================================================
+// FIREBASE WRITE STRATEGY
+// ============================================================================
+// This app minimizes Firebase writes by only writing on explicit user actions:
+//
+// WHEN FIREBASE WRITES HAPPEN:
+// 1. Adding an expense: Only when user clicks "Add Expense" button
+// 2. Editing an expense: Only when user clicks "Save" button
+// 3. Removing an expense: Only when user clicks "Remove" button
+// 4. Creating a session: Only when user clicks "Copy Session Link" button
+//
+// WHEN FIREBASE DOES NOT WRITE:
+// - While typing in any text field (NO keystroke writes)
+// - While filling out the expense form (NO input event listeners)
+// - While changing session names (debounced, only on blur after 300ms)
+//
+// LOCAL-ONLY OPERATIONS (No Firebase):
+// - saveToLocal() uses localStorage only, never touches Firebase
+// - All form input happens locally first, then syncs to Firebase on button click
+//
+// ============================================================================
+
+// --- Toast Notifications ---
+function showToast(message, type = 'success', duration = 2500) {
+  const toast = document.createElement('div');
+  toast.className = `alert alert-${type === 'error' ? 'danger' : type} position-fixed`;
+  toast.style.cssText = `
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    min-width: 300px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    animation: slideIn 0.3s ease-out;
+  `;
+  toast.innerHTML = `
+    <div class="d-flex align-items-center">
+      <i class="bi ${type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill'} me-2"></i>
+      <span>${message}</span>
+    </div>
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.animation = 'slideOut 0.3s ease-in';
+    setTimeout(() => toast.remove(), 300);
+  }, duration);
+}
+
 // --- State ---
 let participants = [];
 let sessionType = 'single';
 let sessions = [];
 let expenses = {};
 let currentSessionIdx = 0;
+
+// --- Amount Parsing & Validation ---
+function parseAmountString(raw) {
+  if (raw === null || raw === undefined) return NaN;
+  if (typeof raw === 'number') return isFinite(raw) ? raw : NaN;
+  let s = String(raw).trim();
+  if (s === '') return NaN;
+  // Remove common currency symbols and thousands separators
+  s = s.replace(/[$€£,\u00A0]/g, '');
+  // Allow only digits, decimal points, parentheses, whitespace and basic operators
+  if (!/^[0-9+\-*/().\s]+$/.test(s)) return NaN;
+  try {
+    // Evaluate the arithmetic expression safely because we've stripped all letters
+    // Use Function instead of eval; input is restricted by the regex above
+    // Normalize multiple spaces
+    const expr = s.replace(/\s+/g, '');
+    const result = Function('return (' + expr + ')')();
+    return (typeof result === 'number' && isFinite(result)) ? result : NaN;
+  } catch (e) {
+    return NaN;
+  }
+}
 
 // --- Step 1: Participants ---
 const participantInput = document.getElementById('participantInput');
@@ -158,7 +237,7 @@ function loadFromLocal() {
 // --- Add expense locally ---
 document.getElementById('addExpenseBtn').onclick = async function() {
   const name = document.getElementById('expenseName').value.trim();
-  const amount = parseFloat(document.getElementById('expenseAmount').value);
+  const amount = parseAmountString(document.getElementById('expenseAmount').value);
   const gst = parseFloat(document.getElementById('expenseGst').value) || 1.19;
   const paidBy = document.getElementById('expensePaidBy').value;
   const splitAmong = Array.from(document.querySelectorAll('#splitAmongCheckboxes input:checked')).map(cb => cb.value);
@@ -170,12 +249,12 @@ document.getElementById('addExpenseBtn').onclick = async function() {
   const sessionTitle = sessionType === 'single' ? document.getElementById('singleSessionName').value.trim() : sessions[currentSessionIdx];
   const newExpense = { name, amount, gst, paid_by: paidBy, split_by: splitAmong };
   if (sessionId) {
-    // Add to Supabase
+    // Add to Firestore
     try {
       // Find the correct session object (by title)
       let sessionObj = null;
-      if (window.supabaseSession && window.supabaseSession.read) {
-        const allSessions = await window.supabaseSession.read({ id: sessionId });
+      if (window.firestoreSession && window.firestoreSession.read) {
+        const allSessions = await window.firestoreSession.read({ id: sessionId });
         if (Array.isArray(allSessions)) {
           sessionObj = allSessions.find(s => s.title === sessionTitle) || allSessions[0];
         } else {
@@ -183,7 +262,7 @@ document.getElementById('addExpenseBtn').onclick = async function() {
         }
       }
       if (sessionObj) {
-        const created = await window.supabaseExpense.create({ ...newExpense, session_id: sessionObj.id });
+        const created = await window.firestoreExpense.create({ ...newExpense, session_id: sessionObj.id });
         if (created && created.id) newExpense.id = created.id;
       }
     } catch (e) {
@@ -203,8 +282,24 @@ function addExpenseLocal(exp) {
   saveToLocal();
 }
 
-// --- Utility: Robustly hide loading modal ---
+// --- Utility: Robustly show/hide loading modal with message ---
 let loadingModalTimeout = null;
+function showLoadingModal(loadingModalEl, message = 'Loading...') {
+  if (!loadingModalEl) return null;
+  try {
+    const modalBody = loadingModalEl.querySelector('.modal-body') || loadingModalEl.querySelector('[data-loading-message]');
+    if (modalBody) modalBody.textContent = message;
+    let loadingModal = null;
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+      loadingModal = new bootstrap.Modal(loadingModalEl);
+      loadingModal.show();
+    }
+    return loadingModal;
+  } catch (e) {
+    console.warn('Modal could not be shown:', e);
+    return null;
+  }
+}
 function safeHideModal(loadingModal, loadingModalEl) {
   if (!loadingModal) return;
   try {
@@ -217,7 +312,7 @@ function safeHideModal(loadingModal, loadingModalEl) {
   }
 }
 
-// --- Share Session: Insert into Supabase and show link ---
+// --- Share Session: Insert into Firestore and show link ---
 const copyBtn = document.getElementById('copySessionLinkBtn');
 const copyBtnCaption = document.getElementById('copySessionCaption');
 function showCopyBtn(sessionId) {
@@ -226,11 +321,15 @@ function showCopyBtn(sessionId) {
   copyBtnCaption.style.display = 'inline-block';
   copyBtn.onclick = function() {
     const url = `${window.location.origin}${window.location.pathname}?sessionid=${sessionId}`;
-    navigator.clipboard.writeText(url);
-    copyBtn.innerHTML = '<i class="bi bi-check2"></i> Copied!';
-    setTimeout(() => {
-      copyBtn.innerHTML = '<i class="bi bi-link-45deg"></i> Copy Session Link';
-    }, 1500);
+    navigator.clipboard.writeText(url).then(() => {
+      showToast('Session link copied!', 'success');
+      copyBtn.innerHTML = '<i class="bi bi-check2"></i> Copied!';
+      setTimeout(() => {
+        copyBtn.innerHTML = '<i class="bi bi-link-45deg"></i> Copy Session Link';
+      }, 1500);
+    }).catch(() => {
+      showToast('Failed to copy link. Try again later.', 'error');
+    });
   };
 }
 copyBtn.onclick = async function() {
@@ -238,28 +337,25 @@ copyBtn.onclick = async function() {
   const existingSessionId = getSessionIdFromUrl();
   if (existingSessionId) {
     const url = `${window.location.origin}${window.location.pathname}?sessionid=${existingSessionId}`;
-    navigator.clipboard.writeText(url);
-    copyBtn.innerHTML = '<i class="bi bi-check2"></i> Copied!';
-    setTimeout(() => {
-      copyBtn.innerHTML = '<i class="bi bi-link-45deg"></i> Copy Session Link';
-    }, 1500);
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast('Session link copied!', 'success');
+      copyBtn.innerHTML = '<i class="bi bi-check2"></i> Copied!';
+      setTimeout(() => {
+        copyBtn.innerHTML = '<i class="bi bi-link-45deg"></i> Copy Session Link';
+      }, 1500);
+    } catch (err) {
+      showToast('Failed to copy link. Try again later.', 'error');
+    }
     return;
   }
   // Show loading spinner
   const loadingModalEl = document.getElementById('loadingModal');
-  let loadingModal = null;
-  let modalAvailable = false;
-  if (loadingModalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-    try {
-      loadingModal = new bootstrap.Modal(loadingModalEl);
-      loadingModal.show();
-      modalAvailable = true;
-      // Auto-hide after 5 seconds
-      loadingModalTimeout = setTimeout(() => safeHideModal(loadingModal, loadingModalEl), 3000);
-    } catch (e) {
-      console.warn('Modal could not be shown:', e);
-      modalAvailable = false;
-    }
+  let loadingModal = showLoadingModal(loadingModalEl, 'Creating session...');
+  let modalAvailable = loadingModal !== null;
+  if (modalAvailable) {
+    // Auto-hide after 5 seconds
+    loadingModalTimeout = setTimeout(() => safeHideModal(loadingModal, loadingModalEl), 3000);
   }
   try {
     let createdSession, childSessions;
@@ -267,7 +363,7 @@ copyBtn.onclick = async function() {
       // Use the first session as the group name (parent), others as children
       const parentTitle = sessions[0];
       const childTitles = sessions;
-      const result = await window.supabaseSession.create({
+      const result = await window.firestoreSession.create({
         title: parentTitle,
         participants,
         type: 'multi',
@@ -276,7 +372,7 @@ copyBtn.onclick = async function() {
       createdSession = result.parent;
       childSessions = result.children;
     } else {
-      createdSession = await window.supabaseSession.create({
+      createdSession = await window.firestoreSession.create({
         title: sessionType === 'single' ? document.getElementById('singleSessionName').value.trim() : sessions[0],
         participants,
         type: sessionType,
@@ -292,7 +388,7 @@ copyBtn.onclick = async function() {
       for (const sessionTitle of sessions) {
         const exps = expenses[sessionTitle] || [];
         for (const exp of exps) {
-          await window.supabaseExpense.create({
+          await window.firestoreExpense.create({
             ...exp,
             session_id: titleToId[sessionTitle]
           });
@@ -302,7 +398,7 @@ copyBtn.onclick = async function() {
       for (const sessionTitle of sessionType === 'single' ? [document.getElementById('singleSessionName').value.trim()] : sessions) {
         const exps = expenses[sessionTitle] || [];
         for (const exp of exps) {
-          await window.supabaseExpense.create({
+          await window.firestoreExpense.create({
             ...exp,
             session_id: createdSession.id
           });
@@ -318,8 +414,9 @@ copyBtn.onclick = async function() {
     window.location.href = `${window.location.pathname}?sessionid=${createdSession.id}`;
     return;
   } catch (err) {
+    console.error('Session creation error:', err);
     if (modalAvailable && loadingModal) safeHideModal(loadingModal, loadingModalEl);
-    alert('Failed to share session: ' + err.message);
+    showToast('Failed to create session: ' + err.message, 'error', 4000);
   } finally {
     if (modalAvailable && loadingModal) {
       safeHideModal(loadingModal, loadingModalEl);
@@ -341,28 +438,31 @@ async function restoreSessionFromUrl() {
   }
   // Show loading spinner
   const loadingModalEl = document.getElementById('loadingModal');
-  let loadingModal = null;
-  let modalAvailable = false;
-  if (loadingModalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-    try {
-      loadingModal = new bootstrap.Modal(loadingModalEl);
-      loadingModal.show();
-      modalAvailable = true;
-      // Auto-hide after 5 seconds
-      loadingModalTimeout = setTimeout(() => safeHideModal(loadingModal, loadingModalEl), 5000);
-    } catch (e) {
-      console.warn('Modal could not be shown:', e);
-      modalAvailable = false;
-    }
+  let loadingModal = showLoadingModal(loadingModalEl, 'Loading session...');
+  let modalAvailable = loadingModal !== null;
+  if (modalAvailable) {
+    // Auto-hide after 5 seconds
+    loadingModalTimeout = setTimeout(() => safeHideModal(loadingModal, loadingModalEl), 5000);
   }
   try {
     // Get parent session
-    let session = await window.supabaseSession.read({ id: sessionId });
-    if (Array.isArray(session)) session = session[0];
+    const sessionArr = await window.firestoreSession.read({ id: sessionId });
+    let session = Array.isArray(sessionArr) ? sessionArr[0] : sessionArr;
     if (!session) throw new Error('NO_SESSION_FOUND');
-    // Get child sessions (if any)
-    let childSessions = await window.supabaseSession.read({ parent: sessionId });
-    if (!Array.isArray(childSessions)) childSessions = childSessions ? [childSessions] : [];
+    // Get child sessions (if any).
+    // First try reading the `children` array on the parent (preferred).
+    let childSessions = [];
+    if (Array.isArray(session.children) && session.children.length > 0) {
+      for (const childId of session.children) {
+        const childArr = await window.firestoreSession.read({ id: childId });
+        const child = Array.isArray(childArr) ? childArr[0] : childArr;
+        if (child) childSessions.push(child);
+      }
+    } else {
+      // Fallback: query by parent (for older sessions without `children`)
+      const cs = await window.firestoreSession.read({ parent: sessionId });
+      childSessions = Array.isArray(cs) ? cs : (cs ? [cs] : []);
+    }
     // If multi-session, use child sessions for session names
     if (session.type === 'multi' && childSessions.length > 0) {
       sessions = childSessions.map(s => s.title);
@@ -387,11 +487,11 @@ async function restoreSessionFromUrl() {
     expenses = {};
     if (session.type === 'multi' && childSessions.length > 0) {
       for (const s of childSessions) {
-        const exps = await window.supabaseExpense.read({ session_id: s.id });
+        const exps = await window.firestoreExpense.read({ session_id: s.id });
         expenses[s.title] = exps || [];
       }
     } else {
-      const exps = await window.supabaseExpense.read({ session_id: session.id });
+      const exps = await window.firestoreExpense.read({ session_id: session.id });
       expenses[session.title] = exps || [];
     }
     currentSessionIdx = 0;
@@ -433,10 +533,10 @@ document.getElementById('settleUpBtn').onclick = function() {
   // Calculate balances
   const balances = {};
   allExpenses.forEach(exp => {
-    let amount = parseFloat(exp.amount) * parseFloat(exp.gst);
+    let amount = Number(exp.amount) * Number(exp.gst);
     // If GST is 1.19, apply 10% svc then 9% gst
-    if (parseFloat(exp.gst) === 1.19) {
-      amount = parseFloat(exp.amount) * 1.10;
+    if (Number(exp.gst) === 1.19) {
+      amount = Number(exp.amount) * 1.10;
       amount += amount * 0.09;
     }
     const splitBy = exp.split_by || exp.splitBy;
@@ -577,7 +677,7 @@ window.editExpense = function(idx) {
   addBtn.onclick = async function() {
     // Save changes
     const name = document.getElementById('expenseName').value.trim();
-    const amount = parseFloat(document.getElementById('expenseAmount').value);
+    const amount = parseAmountString(document.getElementById('expenseAmount').value);
     const gst = parseFloat(document.getElementById('expenseGst').value) || 1.199;
     const paidBy = document.getElementById('expensePaidBy').value;
     const splitAmong = Array.from(document.querySelectorAll('#splitAmongCheckboxes input:checked')).map(cb => cb.value);
@@ -589,7 +689,7 @@ window.editExpense = function(idx) {
     if (sessionId && exp.id) {
       try {
         // Pass id as primitive, update data as second arg
-        await window.supabaseExpense.update(exp.id, {
+        await window.firestoreExpense.update(exp.id, {
           name,
           amount,
           gst,
@@ -621,7 +721,7 @@ window.removeExpense = async function(idx) {
   const sessionId = getSessionIdFromUrl();
   if (sessionId && exp && exp.id) {
     try {
-      await window.supabaseExpense.delete(exp.id); // Pass only the id, not the whole object
+      await window.firestoreExpense.delete(exp.id); // Pass only the id, not the whole object
     } catch (e) {
       alert('Failed to delete expense from database.');
     }
@@ -665,7 +765,7 @@ document.addEventListener('DOMContentLoaded', function() {
   restoreSessionFromUrl();
 });
 
-document.getElementById('singleSessionName').addEventListener('blur', function() {
+document.getElementById('singleSessionName').addEventListener('blur', debounce(function() {
   // Update sessions array and re-render session tabs when user leaves the session name input
   const name = this.value.trim();
   if (name) {
@@ -673,8 +773,9 @@ document.getElementById('singleSessionName').addEventListener('blur', function()
     saveToLocal();
     renderSessionTabs();
   }
-});
-document.getElementById('multiSessionNameInput').addEventListener('blur', function() {
+}, 300));
+
+document.getElementById('multiSessionNameInput').addEventListener('blur', debounce(function() {
   // Update sessions array and re-render session tabs when user leaves the multi-session name input
   const name = this.value.trim();
   if (name && !sessions.includes(name)) {
@@ -687,7 +788,25 @@ document.getElementById('multiSessionNameInput').addEventListener('blur', functi
     renderMultiSessions();
     renderSessionTabs();
   }
-});
+}, 300));
+
+// Validate amount input on blur (supports arithmetic expressions)
+const expenseAmountInput = document.getElementById('expenseAmount');
+if (expenseAmountInput) {
+  expenseAmountInput.addEventListener('blur', function() {
+    const parsed = parseAmountString(this.value);
+    if (isNaN(parsed) || parsed <= 0) {
+      this.classList.add('is-invalid');
+      this.setCustomValidity('Enter a valid positive amount or expression (e.g. 100+50)');
+      showToast('Invalid amount. Use numbers or expressions like 100+50', 'error');
+    } else {
+      this.classList.remove('is-invalid');
+      this.setCustomValidity('');
+      // Optionally normalize the displayed value to the evaluated number:
+      // this.value = parsed;
+    }
+  });
+}
 
 document.getElementById('resetSplitterBtn').addEventListener('click', function() {
   resetSplitterState();
