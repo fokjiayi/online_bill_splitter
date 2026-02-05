@@ -3,9 +3,11 @@ const fs = require('fs');
 
 const configContent = `
 // config.js (auto-generated)
-window.SUPABASE_CONFIG = {
-  url: "${process.env.PUBLIC_SUPABASE_URL}",
-  key: "${process.env.PUBLIC_SUPABASE_KEY}"
+// Firebase/Firestore Configuration (if using Firestore)
+window.FIREBASE_CONFIG = {
+  apiKey: "${process.env.PUBLIC_FIREBASE_API_KEY}",
+  authDomain: "${process.env.PUBLIC_FIREBASE_AUTH_DOMAIN}",
+  projectId: "${process.env.PUBLIC_FIREBASE_PROJECT_ID}"
 };
 `;
 
