@@ -529,12 +529,8 @@ async function restoreSessionFromUrl() {
 }
 
 // --- Calculate Settlements (Auto-triggers whenever expenses change) ---
-function calculateSettlements() {
-  const resultsDiv = document.getElementById('resultsSummary');
-  if (!resultsDiv) return;
-  resultsDiv.innerHTML = '';
-  
-  // Gather all expenses across all sessions
+// --- Helper: Gather all expenses across sessions ---
+function getAllExpenses() {
   let allExpenses = [];
   if (sessionType === 'single') {
     const sessionTitle = document.getElementById('singleSessionName').value.trim();
@@ -544,17 +540,76 @@ function calculateSettlements() {
       allExpenses = allExpenses.concat(expenses[sessionTitle] || []);
     }
   }
+  return allExpenses;
+}
+
+// --- Detailed Settlement: Net settlement between each pair of parties ---
+function calculateDetailedSettlements(allExpenses) {
+  const debts = {}; // { "Alice->Bob": 10.50 }
   
-  if (allExpenses.length === 0) {
-    resultsDiv.innerHTML = '<div class="text-muted">No expenses yet - settlements will appear here</div>';
-    return;
+  allExpenses.forEach(exp => {
+    let amount = Number(exp.amount) * Number(exp.gst);
+    if (Number(exp.gst) === 1.19) {
+      amount = Number(exp.amount) * 1.10;
+      amount += amount * 0.09;
+    }
+    
+    const splitBy = exp.split_by || exp.splitBy;
+    const paidBy = exp.paid_by || exp.paidBy;
+    const share = (amount / splitBy.length).toFixed(2);
+    
+    // For each person in splitBy (except payer), they owe the payer
+    splitBy.forEach(person => {
+      if (person !== paidBy) {
+        const key = person + '->' + paidBy;
+        debts[key] = (parseFloat(debts[key]) || 0) + parseFloat(share);
+      }
+    });
+  });
+  
+  // Net out debts between pairs (if A owes B and B owes A, show only net)
+  const netDebts = {};
+  for (const key in debts) {
+    const [debtor, creditor] = key.split('->');
+    const reverseKey = creditor + '->' + debtor;
+    
+    if (netDebts[key] !== undefined) continue; // Already processed
+    
+    const forwardAmount = debts[key] || 0;
+    const reverseAmount = debts[reverseKey] || 0;
+    
+    if (forwardAmount > reverseAmount) {
+      // Debtor still owes creditor
+      netDebts[key] = (forwardAmount - reverseAmount).toFixed(2);
+    } else if (reverseAmount > forwardAmount) {
+      // Creditor actually owes debtor (flip it)
+      netDebts[reverseKey] = (reverseAmount - forwardAmount).toFixed(2);
+    }
+    // If equal, no transaction needed
   }
   
+  // Convert to sorted list
+  const debtsList = [];
+  for (const key in netDebts) {
+    const [debtor, creditor] = key.split('->');
+    debtsList.push({ debtor, creditor, payment: netDebts[key] });
+  }
+  
+  // Sort by creditor then debtor for clarity
+  debtsList.sort((a, b) => {
+    if (a.creditor !== b.creditor) return a.creditor.localeCompare(b.creditor);
+    return a.debtor.localeCompare(b.debtor);
+  });
+  
+  return debtsList;
+}
+
+// --- Net Settlement: Minimize transactions ---
+function calculateNetSettlements(allExpenses) {
   // Calculate balances
   const balances = {};
   allExpenses.forEach(exp => {
     let amount = Number(exp.amount) * Number(exp.gst);
-    // If GST is 1.19, apply 10% svc then 9% gst
     if (Number(exp.gst) === 1.19) {
       amount = Number(exp.amount) * 1.10;
       amount += amount * 0.09;
@@ -585,7 +640,6 @@ function calculateSettlements() {
         if (owes[creditor] > 0) {
           const payment = Math.min(amountOwed, owes[creditor]);
           owesList.push({ debtor, creditor, payment: payment.toFixed(2) });
-          resultsDiv.innerHTML += `<div class="payment-item">${debtor} pays ${creditor}: <strong>$${payment.toFixed(2)}</strong></div>`;
           owes[creditor] -= payment;
           amountOwed -= payment;
         }
@@ -593,8 +647,32 @@ function calculateSettlements() {
     }
   }
   
+  return owesList;
+}
+
+// --- Display Settlements ---
+function calculateSettlements() {
+  const resultsDiv = document.getElementById('resultsSummary');
+  if (!resultsDiv) return;
+  resultsDiv.innerHTML = '';
+  
+  const allExpenses = getAllExpenses();
+  
+  if (allExpenses.length === 0) {
+    resultsDiv.innerHTML = '<div class="text-muted">No expenses yet - settlements will appear here</div>';
+    return;
+  }
+  
+  // Check selected settlement mode
+  const mode = document.querySelector('input[name="settlementMode"]:checked')?.value || 'net';
+  const owesList = mode === 'detailed' ? calculateDetailedSettlements(allExpenses) : calculateNetSettlements(allExpenses);
+  
   if (owesList.length === 0) {
     resultsDiv.innerHTML = '<div class="text-success fw-bold">All settled up! 🎉</div>';
+  } else {
+    resultsDiv.innerHTML = owesList.map(debt => 
+      `<div class="payment-item">${debt.debtor} pays ${debt.creditor}: <strong>$${debt.payment}</strong></div>`
+    ).join('');
   }
 }
 
@@ -765,6 +843,13 @@ window.removeExpense = async function(idx) {
 
 // Store original addExpenseBtn handler for restoring after edit
 const originalAddExpenseHandler = document.getElementById('addExpenseBtn').onclick;
+
+// --- Settlement Mode Toggle ---
+document.querySelectorAll('input[name="settlementMode"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    calculateSettlements();
+  });
+});
 
 // --- Handle Resume Session Dialog ---
 function showResumeSessionDialog() {
