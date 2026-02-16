@@ -327,23 +327,35 @@ function safeHideModal(loadingModal, loadingModalEl) {
 // --- Share Session: Insert into Firestore and show link ---
 const copyBtn = document.getElementById('copySessionLinkBtn');
 const copyBtnCaption = document.getElementById('copySessionCaption');
+
+function updateCopyBtnText() {
+  const hasSessionId = !!getSessionIdFromUrl();
+  if (hasSessionId) {
+    copyBtn.innerHTML = '<i class="bi bi-link-45deg"></i> Copy Session Link';
+  } else {
+    copyBtn.innerHTML = '<i class="bi bi-link-45deg"></i> Create Shareable Session';
+  }
+}
+
 function showCopyBtn(sessionId) {
   if (!copyBtn) return;
   copyBtn.style.display = 'inline-block';
   copyBtnCaption.style.display = 'inline-block';
+  updateCopyBtnText();
   copyBtn.onclick = function() {
     const url = `${window.location.origin}${window.location.pathname}?sessionid=${sessionId}`;
     navigator.clipboard.writeText(url).then(() => {
       showToast('Session link copied!', 'success');
       copyBtn.innerHTML = '<i class="bi bi-check2"></i> Copied!';
       setTimeout(() => {
-        copyBtn.innerHTML = '<i class="bi bi-link-45deg"></i> Copy Session Link';
+        updateCopyBtnText();
       }, 1500);
     }).catch(() => {
       showToast('Failed to copy link. Try again later.', 'error');
     });
   };
 }
+
 copyBtn.onclick = async function() {
   // If sessionid exists in URL, just copy the link and return
   const existingSessionId = getSessionIdFromUrl();
@@ -354,7 +366,7 @@ copyBtn.onclick = async function() {
       showToast('Session link copied!', 'success');
       copyBtn.innerHTML = '<i class="bi bi-check2"></i> Copied!';
       setTimeout(() => {
-        copyBtn.innerHTML = '<i class="bi bi-link-45deg"></i> Copy Session Link';
+        updateCopyBtnText();
       }, 1500);
     } catch (err) {
       showToast('Failed to copy link. Try again later.', 'error');
@@ -421,9 +433,15 @@ copyBtn.onclick = async function() {
     if (modalAvailable && loadingModal) {
       safeHideModal(loadingModal, loadingModalEl);
     }
+    
+    // Store flag to show toast after redirect
+    const fullUrl = `${window.location.origin}${window.location.pathname}?sessionid=${createdSession.id}`;
+    sessionStorage.setItem('showSessionCreatedToast', 'true');
+    sessionStorage.setItem('newSessionUrl', fullUrl);
+    
     // Clear localStorage and redirect to session URL (parent session for multi)
     localStorage.removeItem('billSplitterSession');
-    window.location.href = `${window.location.pathname}?sessionid=${createdSession.id}`;
+    window.location.href = fullUrl;
     return;
   } catch (err) {
     console.error('Session creation error:', err);
@@ -448,6 +466,8 @@ async function restoreSessionFromUrl() {
     renderExpenseList();
     return;
   }
+  // Change copy button to "Copy Session Link" mode if sessionId exists in URL
+  document.getElementById('copySessionLinkBtn').innerHTML = '<i class="bi bi-link-45deg"></i> Copy Session Link';
   // Show loading spinner
   const loadingModalEl = document.getElementById('loadingModal');
   let loadingModal = showLoadingModal(loadingModalEl, 'Loading session...');
@@ -686,14 +706,7 @@ function showCopyBtnAfterSessionCreate() {
   if (!copyBtn) return;
   copyBtn.style.display = 'inline-block';
   copyBtnCaption.style.display = 'inline-block';
-  copyBtn.onclick = copyBtn.onclick || function() {
-    const url = `${window.location.origin}${window.location.pathname}?sessionid=LOCAL`;
-    navigator.clipboard.writeText(url);
-    copyBtn.innerHTML = '<i class="bi bi-check2"></i> Copied!';
-    setTimeout(() => {
-      copyBtn.innerHTML = '<i class="bi bi-link-45deg"></i> Copy Session Link';
-    }, 1500);
-  };
+  updateCopyBtnText();
 }
 // Show the button after session creation (single or multi)
 document.getElementById('singleSessionName').addEventListener('blur', showCopyBtnAfterSessionCreate);
@@ -885,9 +898,29 @@ function showResumeSessionDialog() {
 
 // --- On page load, restore session if sessionid in URL or from localStorage ---
 document.addEventListener('DOMContentLoaded', function() {
+  // Check if session was just created
+  const showToastFlag = sessionStorage.getItem('showSessionCreatedToast');
+  if (showToastFlag === 'true') {
+    sessionStorage.removeItem('showSessionCreatedToast');
+    const newSessionUrl = sessionStorage.getItem('newSessionUrl');
+    if (newSessionUrl) {
+      sessionStorage.removeItem('newSessionUrl');
+      navigator.clipboard.writeText(newSessionUrl).then(() => {
+        showToast('Session created! Link copied to clipboard.', 'success', 3000);
+        if (copyBtn) {
+          copyBtn.innerHTML = '<i class="bi bi-check2"></i> Copied!';
+          setTimeout(() => {
+            updateCopyBtnText();
+          }, 1500);
+        }
+      }).catch(() => {
+        showToast('Session created! You can manually copy the link.', 'success');
+      });
+    }
+  }
+  
   const sessionId = getSessionIdFromUrl();
   if (!sessionId) {
-    console.log('there is no session id in url');
     // Check if there's data in localStorage and show resume dialog
     const hasLocalData = !!localStorage.getItem('billSplitterSession');
     if (hasLocalData) {
@@ -900,8 +933,12 @@ document.addEventListener('DOMContentLoaded', function() {
       renderExpenseForm();
       renderExpenseList();
     }
+    // Update button text for fresh start
+    if (copyBtn) updateCopyBtnText();
     return;
   }
+  // Update button text when session has ID
+  if (copyBtn) updateCopyBtnText();
   restoreSessionFromUrl();
 });
 
