@@ -293,13 +293,41 @@
             </div>
             <!-- Expense List -->
             <ul class="expense-list" id="expenseList"></ul>
-            <!-- Settle Up Button -->
-            <button class="btn btn-primary w-100 mb-3" id="settleUpBtn">Settle Up</button>
             <!-- Results -->
             <div id="resultsSummary" class="mt-3"></div>
           </div>
         </div>
       </div>
+      <!-- Resume Session Dialog Modal -->
+      <div
+        class="modal fade"
+        id="resumeSessionModal"
+        tabindex="-1"
+        aria-hidden="true"
+        data-bs-backdrop="static"
+        data-bs-keyboard="false"
+      >
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header bg-success bg-opacity-10">
+              <h5 class="modal-title">
+                <i class="bi bi-clock-history me-2"></i>Previous Session Found
+              </h5>
+            </div>
+            <div class="modal-body">
+              <p>We found data from your last session. Would you like to resume it or start fresh?</p>
+              <div id="resumeSessionPreview" class="bg-light p-3 rounded mb-3" style="border-left: 4px solid var(--primary-color);">
+                <!-- Session preview will be injected here -->
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" id="startNewBtn">Start New</button>
+              <button type="button" class="btn btn-success" id="resumeSessionBtn">Resume Session</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Loading Spinner Modal -->
       <div
         class="modal fade"

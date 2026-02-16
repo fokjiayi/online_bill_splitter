@@ -4,7 +4,7 @@ function debounce(func, delay) {
   let timeoutId;
   return function(...args) {
     clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func(...args), delay);
+    timeoutId = setTimeout(() => func.call(this, ...args), delay);
   };
 }
 
@@ -210,16 +210,26 @@ function loadFromLocal() {
     sessions = sessionArr.map(s => s.title);
     participants = sessionArr[0]?.participants || [];
     sessionType = sessionArr[0]?.type || 'single';
+    
     // Populate singleSessionName input if single session
     if (sessionType === 'single' && sessions[0]) {
       const singleSessionNameInput = document.getElementById('singleSessionName');
       if (singleSessionNameInput) singleSessionNameInput.value = sessions[0];
     }
+    
     // Map expenses to { [sessionTitle]: [expense, ...] }
     expenses = {};
     for (const exp of expenseArr) {
+      let sessionTitle = '';
+      // Try to find session by ID first
       const sessionObj = sessionArr.find(s => s.id === exp.session_id);
-      const sessionTitle = sessionObj ? sessionObj.title : '';
+      if (sessionObj) {
+        sessionTitle = sessionObj.title;
+      } else {
+        // Fallback: use first session (for backward compatibility with old data format)
+        sessionTitle = sessions[0] || '';
+      }
+      
       if (!expenses[sessionTitle]) expenses[sessionTitle] = [];
       expenses[sessionTitle].push({
         id: exp.id,
@@ -231,7 +241,9 @@ function loadFromLocal() {
       });
     }
     currentSessionIdx = 0;
-  } catch {}
+  } catch (e) {
+    console.error('loadFromLocal error:', e);
+  }
 }
 
 // --- Add expense locally ---
@@ -516,10 +528,12 @@ async function restoreSessionFromUrl() {
   }
 }
 
-// --- Settle Up Logic ---
-document.getElementById('settleUpBtn').onclick = function() {
+// --- Calculate Settlements (Auto-triggers whenever expenses change) ---
+function calculateSettlements() {
   const resultsDiv = document.getElementById('resultsSummary');
+  if (!resultsDiv) return;
   resultsDiv.innerHTML = '';
+  
   // Gather all expenses across all sessions
   let allExpenses = [];
   if (sessionType === 'single') {
@@ -530,6 +544,12 @@ document.getElementById('settleUpBtn').onclick = function() {
       allExpenses = allExpenses.concat(expenses[sessionTitle] || []);
     }
   }
+  
+  if (allExpenses.length === 0) {
+    resultsDiv.innerHTML = '<div class="text-muted">No expenses yet - settlements will appear here</div>';
+    return;
+  }
+  
   // Calculate balances
   const balances = {};
   allExpenses.forEach(exp => {
@@ -549,11 +569,13 @@ document.getElementById('settleUpBtn').onclick = function() {
       balances[person] -= share;
     });
   });
+  
   // Determine who owes whom
   const owes = {};
   for (let person in balances) {
     if (balances[person] > 0) owes[person] = balances[person];
   }
+  
   const owesList = [];
   for (let debtor in balances) {
     if (balances[debtor] < 0) {
@@ -563,17 +585,23 @@ document.getElementById('settleUpBtn').onclick = function() {
         if (owes[creditor] > 0) {
           const payment = Math.min(amountOwed, owes[creditor]);
           owesList.push({ debtor, creditor, payment: payment.toFixed(2) });
-          resultsDiv.innerHTML += `<div>${debtor} pays ${creditor}: $${payment.toFixed(2)}</div>`;
+          resultsDiv.innerHTML += `<div class="payment-item">${debtor} pays ${creditor}: <strong>$${payment.toFixed(2)}</strong></div>`;
           owes[creditor] -= payment;
           amountOwed -= payment;
         }
       }
     }
   }
+  
   if (owesList.length === 0) {
-    resultsDiv.innerHTML = '<div>All settled up! 🎉</div>';
+    resultsDiv.innerHTML = '<div class="text-success fw-bold">All settled up! 🎉</div>';
   }
-};
+}
+
+// // Keep button for manual recalc if needed (though it auto-updates now)
+// document.getElementById('settleUpBtn').onclick = function() {
+//   calculateSettlements();
+// };
 
 // --- Show Copy Button after session creation ---
 function showCopyBtnAfterSessionCreate() {
@@ -606,7 +634,7 @@ if (typeof renderExpenseList !== 'function') {
 function renderSessionTabs() {
   const sessionTabs = document.getElementById('sessionTabs');
   if (!sessionTabs) return;
-  sessionTabs.innerHTML = (sessionType === 'single' ? [document.getElementById('singleSessionName').value.trim()] : sessions).map((name, idx) =>
+  sessionTabs.innerHTML = sessions.map((name, idx) =>
     `<button class="btn ${idx === currentSessionIdx ? 'btn-filled active' : 'btn-outline-success'} me-2 mb-2" ${idx === currentSessionIdx ? 'aria-current="true"' : ''} onclick="switchSession(${idx})">${name}</button>`
   ).join('');
   // Always update expense form and list for the current session after rendering tabs
@@ -644,7 +672,9 @@ function renderExpenseList() {
   const sessionTitle = sessionType === 'single' ? document.getElementById('singleSessionName').value.trim() : sessions[currentSessionIdx];
   const list = document.getElementById('expenseList');
   if (!list) return;
+  
   const exps = expenses[sessionTitle] || [];
+  
   list.innerHTML = exps.map((exp, idx) =>
     `<li>
       <span class="expense-name">${exp.name}</span> - $${(exp.amount * (exp.gst || 1.19)).toFixed(2)} 
@@ -653,6 +683,8 @@ function renderExpenseList() {
       <button class="btn btn-sm btn-outline-danger ms-1" onclick="removeExpense(${idx})">Remove</button>
     </li>`
   ).join('');
+  // Auto-calculate settlements whenever expenses change
+  calculateSettlements();
 }
 
 window.editExpense = function(idx) {
@@ -734,35 +766,116 @@ window.removeExpense = async function(idx) {
 // Store original addExpenseBtn handler for restoring after edit
 const originalAddExpenseHandler = document.getElementById('addExpenseBtn').onclick;
 
+// --- Handle Resume Session Dialog ---
+function showResumeSessionDialog() {
+  const hasLocalData = !!localStorage.getItem('billSplitterSession');
+  if (!hasLocalData) return false;
+
+  try {
+    const data = JSON.parse(localStorage.getItem('billSplitterSession'));
+    const sessionArr = data.sessions || [];
+    const expenseArr = data.expenses || [];
+
+    // Build preview text
+    let previewHTML = '';
+    if (sessionArr.length > 0) {
+      previewHTML += `<strong>${sessionArr.length} session${sessionArr.length > 1 ? 's' : ''}</strong><br>`;
+      sessionArr.forEach(s => {
+        previewHTML += `• <strong>${s.title}</strong> (${s.participants.length} participant${s.participants.length > 1 ? 's' : ''})<br>`;
+      });
+      previewHTML += `<br><strong>${expenseArr.length} expense${expenseArr.length > 1 ? 's' : ''} recorded</strong>`;
+    }
+
+    document.getElementById('resumeSessionPreview').innerHTML = previewHTML;
+
+    // Show modal
+    const resumeModal = new bootstrap.Modal(document.getElementById('resumeSessionModal'));
+    resumeModal.show();
+    return true;
+  } catch (e) {
+    console.error('Error reading localStorage:', e);
+    return false;
+  }
+}
+
 // --- On page load, restore session if sessionid in URL or from localStorage ---
 document.addEventListener('DOMContentLoaded', function() {
   const sessionId = getSessionIdFromUrl();
   if (!sessionId) {
-    loadFromLocal();
-    // Populate UI fields from localStorage data
-    renderParticipants();
-    renderMultiSessions();
-    renderSessionTabs();
-    renderExpenseForm();
-    renderExpenseList();
-    // Set session type radio
-    if (sessionType === 'single') {
-      document.getElementById('singleSession').checked = true;
-      document.getElementById('singleSessionNameDiv').classList.remove('d-none');
-      document.getElementById('multiSessionNamesDiv').classList.add('d-none');
-      if (sessions[0]) document.getElementById('singleSessionName').value = sessions[0];
+    console.log('there is no session id in url');
+    // Check if there's data in localStorage and show resume dialog
+    const hasLocalData = !!localStorage.getItem('billSplitterSession');
+    if (hasLocalData) {
+      showResumeSessionDialog();
     } else {
-      document.getElementById('multiSession').checked = true;
-      document.getElementById('singleSessionNameDiv').classList.add('d-none');
-      document.getElementById('multiSessionNamesDiv').classList.remove('d-none');
-    }
-    // Show share button if session exists
-    if ((sessionType === 'single' && sessions[0]) || (sessionType === 'multi' && sessions.length > 0)) {
-      showCopyBtnAfterSessionCreate();
+      // No local data, start fresh
+      renderParticipants();
+      renderMultiSessions();
+      renderSessionTabs();
+      renderExpenseForm();
+      renderExpenseList();
     }
     return;
   }
   restoreSessionFromUrl();
+});
+
+// --- Resume Session Dialog Button Handlers ---
+document.getElementById('resumeSessionBtn').addEventListener('click', function() {
+  const resumeModal = bootstrap.Modal.getInstance(document.getElementById('resumeSessionModal'));
+  resumeModal.hide();
+  
+  // Load the data
+  loadFromLocal();
+  
+  // Set session type radio and populate inputs BEFORE rendering
+  if (sessionType === 'single') {
+    document.getElementById('singleSession').checked = true;
+    document.getElementById('singleSessionNameDiv').classList.remove('d-none');
+    document.getElementById('multiSessionNamesDiv').classList.add('d-none');
+    if (sessions[0]) document.getElementById('singleSessionName').value = sessions[0];
+  } else {
+    document.getElementById('multiSession').checked = true;
+    document.getElementById('singleSessionNameDiv').classList.add('d-none');
+    document.getElementById('multiSessionNamesDiv').classList.remove('d-none');
+  }
+  
+  // Now render after inputs are populated
+  renderParticipants();
+  renderMultiSessions();
+  renderSessionTabs();
+  renderExpenseForm();
+  renderExpenseList();
+  
+  // Show share button if session exists
+  if ((sessionType === 'single' && sessions[0]) || (sessionType === 'multi' && sessions.length > 0)) {
+    showCopyBtnAfterSessionCreate();
+  }
+});
+
+document.getElementById('startNewBtn').addEventListener('click', function() {
+  const resumeModal = bootstrap.Modal.getInstance(document.getElementById('resumeSessionModal'));
+  resumeModal.hide();
+  
+  // Clear localStorage and reset state
+  localStorage.removeItem('billSplitterSession');
+  participants = [];
+  sessionType = 'single';
+  sessions = [];
+  expenses = {};
+  currentSessionIdx = 0;
+  
+  // Render empty UI
+  renderParticipants();
+  renderMultiSessions();
+  renderSessionTabs();
+  renderExpenseForm();
+  renderExpenseList();
+  
+  // Set defaults
+  document.getElementById('singleSession').checked = true;
+  document.getElementById('singleSessionNameDiv').classList.remove('d-none');
+  document.getElementById('multiSessionNamesDiv').classList.add('d-none');
 });
 
 document.getElementById('singleSessionName').addEventListener('blur', debounce(function() {
