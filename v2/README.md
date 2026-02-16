@@ -7,9 +7,9 @@ Try version 2 now! https://ezsplit.netlify.app/v2/app.html
 | 🚀 Feature                  |📝 Description |
 |----------------------------|----------------|
 | 🗂️ **Session Management**   | Supports both single and multi-session use cases (e.g., for multi-day trips). |
-| 💰 **Expense Management**   | All expense data is stored in `localStorage` by default and can be synced with Supabase. |
+| 💰 **Expense Management**   | All expense data is stored in `localStorage` by default and can be synced with Firebase. |
 | 🔄 **Data Persistence & Sharing** | Data is saved in `localStorage` for persistence across reloads. Users can generate a shareable link for the current session to enable real-time collaboration. |
-| 🛠️ **Supabase Integration** | Includes a dedicated API layer for Supabase session and expense CRUD operations. Supports multi-session structure (parent/child). Real-time updates ensure changes are reflected in both Supabase and the UI. |
+| 🛠️ **Supabase Integration** | Includes a dedicated API layer for Supabase session and expense CRUD operations. Supports multi-session structure (parent/child). Real-time updates ensure changes are reflected in both Firebase and the UI. |
 
 ### New User interface
 [Video Demo](https://youtu.be/HlLPL3xnAek)
