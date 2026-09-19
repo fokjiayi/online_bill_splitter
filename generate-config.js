@@ -11,5 +11,5 @@ window.FIREBASE_CONFIG = {
 };
 `;
 
-fs.writeFileSync('./v2/config.js', configContent.trim(), 'utf8');
-console.log('✅ config.js generated in /v2');
+fs.writeFileSync('./config.js', configContent.trim(), 'utf8');
+console.log('✅ config.js generated');

@@ -1,6 +1,6 @@
 # Online bill splitter
 This is a bill splitter app that lets you track and split expenses easily! 
-https://ezsplit.netlify.app/
+https://ezsplit.netlify.app/v1
 
 ### Current features 
 - Create, update and delete expenses
@@ -11,7 +11,7 @@ https://ezsplit.netlify.app/
 ### Possible new features 
 - Upload receipt
 - Account login
-- Sharing data-populated splitter ([available in v2](https://github.com/fokjiayi/online_bill_splitter/tree/main/v2))
+- Sharing data-populated splitter ([available in v2](https://github.com/fokjiayi/online_bill_splitter/tree/main))
 
 
 Web version             | Mobile version
