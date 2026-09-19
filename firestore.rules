@@ -1,0 +1,55 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- SESSION COLLECTION ---
+    match /session/{sessionId} {
+      
+      // CREATE: Anyone can create a session
+      allow create: if true;
+      
+      // READ: Anyone can read a session if they know the ID
+      allow get: if true;
+      
+      // Sessions are immutable
+      allow update: if false;
+      
+      // Allow deletion
+      allow delete: if true;
+      
+      // Prevent listing all sessions
+      allow list: if false;
+    }
+
+    // --- EXPENSE COLLECTION ---
+    match /expense/{expenseId} {
+      
+      allow create: if 
+        request.resource.data.session_id != null &&
+        request.resource.data.session_id is string &&
+        request.resource.data.name != null &&
+        request.resource.data.amount != null &&
+        request.resource.data.paid_by != null &&
+        request.resource.data.split_by != null;
+      
+      allow get: if true;
+      
+      allow update: if 
+        request.resource.data.session_id == resource.data.session_id &&
+        request.resource.data.name != null &&
+        request.resource.data.amount != null &&
+        request.resource.data.paid_by != null &&
+        request.resource.data.split_by != null;
+      
+      allow delete: if true;
+      
+      allow list: if (
+        (request.query.limit == null) || (request.query.limit <= 1000)
+      ) && (
+        request.query.fieldFilters.size() > 0 &&
+        request.query.fieldFilters[0].field.fieldPath == 'session_id' &&
+        request.query.fieldFilters[0].op == '=='
+      );
+    }
+  }
+}

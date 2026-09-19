@@ -1,0 +1,4 @@
+# Ignore sensitive config and environment files
+.env
+config.js
+/v2/config.js
